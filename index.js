@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
@@ -8,46 +9,28 @@ morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
 app.use(morgan('tiny'))
 app.use(morgan(':body'))
 
-const persons = {
-    "persons": [
-      {
-        "name": "Arto Hellas",
-        "number": "040-123456",
-        "id": "1"
-      },
-      {
-        "name": "Ada Lovelace",
-        "number": "39-44-5323523",
-        "id": "2"
-      },
-      {
-        "name": "Dan Abramov",
-        "number": "12-43-234345",
-        "id": "3"
-      },
-      {
-        "name": "Mary Poppendieck",
-        "number": "39-23-6423122",
-        "id": "4"
-      },
-      {
-        "name": "test",
-        "number": "39-23-6423122",
-        "id": "8"
-      }
-    ]
-  }
-  
-  app.get('/', (request, response) => {
-    response.send('<h1>Hello World!</h1>')
-  })
-  
-  app.get('/api/persons', (request, response) => {
+
+const Person = require('./models/person')
+
+app.get('/', (request, response) => {
+  response.send('<h1>Hello World!</h1>')
+})
+
+app.get('/api/persons', (request, response) => {
+  Person.find({}).then(persons => {
     response.json(persons)
   })
+})
+
   
-  app.post('/api/persons', (request, response) => {
-    const person = request.body
+app.post('/api/persons', (request, response) => {
+    const body = request.body
+    if (!body.name) {
+      return response.status(400).json({ error: 'name missing' })
+    }
+
+    const person = new Person({name, number})
+
     const name = person.name
     const number = person.number
     const nameExists = persons.persons.find(contact => contact.name === name)
@@ -55,12 +38,15 @@ const persons = {
     const numberMissing = number !== null && number !== ""
     const canPost = !nameExists && nameMissing && numberMissing
 
+
     const errorMessage = nameExists ? "Somebody with this name already exists." : "Either the name or number are missing/empty."
     if(canPost){
         const newId = Math.floor(Math.random()*1000)
         person.id = String(newId)
         persons.persons = [...persons.persons, person];
-        response.json(person)
+        person.save().then(savedPerson => {
+          response.json(savedPerson)
+        })
     }else{
         response.status(404).json({ 
             error: errorMessage
@@ -70,12 +56,13 @@ const persons = {
 
   app.get('/api/persons/:id', (request, response) => {
     const id = request.params.id
-    const person = persons.persons.find(person => person.id === id)
+    Person.findById(id).then(person => {   
     if (person) {
         response.json(person)
       } else {
         response.status(404).end()
       }
+    })
   })
 
   app.delete('/api/persons/:id', (request, response) => {
