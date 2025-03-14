@@ -28,22 +28,24 @@ app.post('/api/persons', (request, response) => {
     if (!body.name) {
       return response.status(400).json({ error: 'name missing' })
     }
-
-    const person = new Person({name, number})
+    const newName = body.name
+    const newNumber = body.number
+    const person = new Person({newName, newNumber})
 
     const name = person.name
-    const number = person.number
-    const nameExists = persons.persons.find(contact => contact.name === name)
+    const number= person.number
+    
+    // const nameExists = persons.persons.find(contact => contact.name === name), removed !nameExists &&  from canPost as well.
+
     const nameMissing = name !== null && name !== ""
     const numberMissing = number !== null && number !== ""
-    const canPost = !nameExists && nameMissing && numberMissing
+    const canPost =  nameMissing && numberMissing
 
-
-    const errorMessage = nameExists ? "Somebody with this name already exists." : "Either the name or number are missing/empty."
+    //changed condition from nameExisting to !canPost
+    const errorMessage = !canPost ? "Somebody with this name already exists." : "Either the name or number are missing/empty."
     if(canPost){
         const newId = Math.floor(Math.random()*1000)
         person.id = String(newId)
-        persons.persons = [...persons.persons, person];
         person.save().then(savedPerson => {
           response.json(savedPerson)
         })
